@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仙人掌領養證明 - 檔名自動化版</title>
-    <!-- 引入 html2pdf 函式庫 -->
+    <title>仙人掌領養證明 - 預設文字優化版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body {
@@ -18,7 +17,6 @@
             font-family: "Microsoft JhengHei", sans-serif;
         }
 
-        /* 右上角保存按鈕 */
         .save-btn {
             position: fixed;
             top: 20px;
@@ -60,13 +58,24 @@
             text-align: center;
         }
 
+        /* 讓 Placeholder 的顏色稍微淡一點，區分預設值與輸入值 */
+        .data-input::placeholder {
+            color: rgba(44, 62, 80, 0.3);
+        }
+
         .sig-wrapper {
             position: absolute;
             display: flex;
             align-items: center;
         }
 
-        canvas { cursor: crosshair; border: 1px dashed #ccc; border-radius: 8px; box-sizing: border-box; }
+        canvas {
+            cursor: crosshair;
+            border: 1px dashed #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.1);
+        }
 
         .clear-btn {
             padding: 2px 8px;
@@ -87,7 +96,6 @@
         }
         .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
         
-        /* 這裡的 .input-no 就是檔名的來源 */
         .input-no { left: 584px; top: 130px; width: 130px; }
         .input-days { left: 580px; top: 183px; width: 85px; }
         .input-year { left: 505px; top: 238px; width: 65px; }
@@ -101,12 +109,6 @@
         #wrapper-admin { right: 37px; bottom: 40px; width: 110px; flex-direction: column-reverse; }
         #wrapper-admin .clear-btn { margin-bottom: 5px; }
         #sig-admin { width: 110px; height: 70px; }
-
-        /* PDF 輸出微調 */
-        @media print {
-            .clear-btn, .save-btn, #hint { display: none !important; }
-            canvas, .photo-slot { border: none !important; }
-        }
     </style>
 </head>
 <body>
@@ -114,19 +116,27 @@
 <button class="save-btn" onclick="saveAsPDF()">💾 保存證明 (PDF)</button>
 
 <div class="certificate-container" id="certificate">
-    <div class="photo-slot" onclick="document.getElementById('upload').click()">
-        <span id="hint" style="color: gray; font-size: 14px;">點擊照片</span>
+    <div class="photo-slot" id="target-photo" onclick="document.getElementById('upload').click()">
+        <span id="hint" style="color: gray; font-size: 14px;">點擊上載照片</span>
         <img id="preview" style="display:none;">
     </div>
     <input type="file" id="upload" style="display:none" accept="image/*" onchange="previewImg(this)">
 
-    <!-- 檔名會抓取這個 input 的值 -->
-    <input type="text" class="data-input input-no" placeholder="編號">
+    <!-- 編號：預設 000，上限 3位 -->
+    <input type="text" inputmode="numeric" class="data-input input-no" placeholder="000" 
+           oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,3)">
     
-    <input type="text" class="data-input input-days" placeholder="0">
-    <input type="text" class="data-input input-year" placeholder="2026">
-    <input type="text" class="data-input input-month" placeholder="05">
-    <input type="text" class="data-input input-day" placeholder="03">
+    <!-- 日數：預設 00000，上限 5位 -->
+    <input type="text" inputmode="numeric" class="data-input input-days" placeholder="00000" 
+           oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,5)">
+    
+    <!-- 年月日維持原樣 -->
+    <input type="text" inputmode="numeric" class="data-input input-year" placeholder="2026" 
+           oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,4)">
+    <input type="text" inputmode="numeric" class="data-input input-month" placeholder="05" 
+           oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,2)">
+    <input type="text" inputmode="numeric" class="data-input input-day" placeholder="03" 
+           oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,2)">
 
     <div class="sig-wrapper" id="wrapper-user">
         <canvas id="sig-user"></canvas>
@@ -142,19 +152,26 @@
 <script>
     function saveAsPDF() {
         const element = document.getElementById('certificate');
-        
-        // 抓取編號輸入框的值
         const idNumber = document.querySelector('.input-no').value.trim() || "未命名";
         
+        const targets = [
+            document.getElementById('target-photo'),
+            document.getElementById('sig-user'),
+            document.getElementById('sig-admin')
+        ];
+        targets.forEach(el => el.style.borderColor = 'transparent');
+
         const opt = {
             margin:       0,
-            filename:     `cactus_(${idNumber}).pdf`, // 自動化檔名
+            filename:     `cactus_${idNumber}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2, useCORS: true, logging: false },
             jsPDF:        { unit: 'px', format: [800, 565], orientation: 'landscape' }
         };
 
-        html2pdf().set(opt).from(element).save();
+        html2pdf().set(opt).from(element).toPdf().get('pdf').save().then(() => {
+            targets.forEach(el => el.style.borderColor = '#ccc');
+        });
     }
 
     function previewImg(input) {
