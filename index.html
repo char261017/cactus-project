@@ -3,17 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仙人掌領養證明 - 完整驗證版</title>
+    <title>仙人掌領養證明 - 最終優化版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #e0e0e0;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; background-color: #e0e0e0;
             font-family: "Microsoft JhengHei", sans-serif;
         }
 
@@ -32,12 +27,6 @@
             background-size: contain; background-repeat: no-repeat;
             background-position: center; background-color: white;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-
-        /* 必填紅星樣式 */
-        .required-star {
-            position: absolute; color: #e74c3c; font-weight: bold;
-            font-size: 18px; pointer-events: none; z-index: 10;
         }
 
         .data-input {
@@ -59,35 +48,23 @@
             border-radius: 4px; color: #666;
         }
 
-        /* --- 位置與紅星定位 --- */
         .photo-slot {
             position: absolute; left: 59px; top: 120px; width: 167px; height: 178px;
             border-radius: 12px; display: flex; justify-content: center; align-items: center;
             cursor: pointer; overflow: hidden; z-index: 5; border: 1px dashed #ccc;
         }
-        .star-photo { left: 50px; top: 110px; }
+        .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
         
         .input-no { left: 584px; top: 130px; width: 130px; }
-        .star-no { left: 580px; top: 120px; }
-
         .input-days { left: 580px; top: 183px; width: 85px; }
-        .star-days { left: 575px; top: 175px; }
-
         .input-year { left: 505px; top: 238px; width: 65px; }
-        .star-year { left: 500px; top: 230px; }
-
         .input-month { left: 609px; top: 238px; width: 40px; }
-        .star-month { left: 605px; top: 230px; }
-
         .input-day { left: 678px; top: 238px; width: 40px; }
-        .star-day { left: 675px; top: 230px; }
 
         #wrapper-user { left: 330px; top: 290px; width: 420px; flex-direction: column; }
-        .star-user { left: 325px; top: 280px; }
         #sig-user { width: 420px; height: 90px; }
 
         #wrapper-admin { right: 37px; bottom: 40px; width: 110px; flex-direction: column-reverse; }
-        .star-admin { right: 140px; bottom: 100px; }
         #sig-admin { width: 110px; height: 70px; }
     </style>
 </head>
@@ -96,16 +73,6 @@
 <button class="save-btn" onclick="saveAsPDF()">💾 保存證明 (PDF)</button>
 
 <div class="certificate-container" id="certificate">
-    <!-- 紅色星號標記 -->
-    <span class="required-star star-photo">*</span>
-    <span class="required-star star-no">*</span>
-    <span class="required-star star-days">*</span>
-    <span class="required-star star-year">*</span>
-    <span class="required-star star-month">*</span>
-    <span class="required-star star-day">*</span>
-    <span class="required-star star-user">*</span>
-    <span class="required-star star-admin">*</span>
-
     <div class="photo-slot" id="target-photo" onclick="document.getElementById('upload').click()">
         <span id="hint" style="color: gray; font-size: 14px;">點擊上傳照片</span>
         <img id="preview" style="display:none;">
@@ -114,6 +81,8 @@
 
     <input type="text" inputmode="numeric" class="data-input input-no" placeholder="000" oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,3)">
     <input type="text" inputmode="numeric" class="data-input input-days" placeholder="00000" oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,5)">
+    
+    <!-- 日期項 -->
     <input type="text" inputmode="numeric" class="data-input input-year" placeholder="2026" oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,4)">
     <input type="text" inputmode="numeric" class="data-input input-month" placeholder="05" oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,2)">
     <input type="text" inputmode="numeric" class="data-input input-day" placeholder="03" oninput="this.value=this.value.replace(/[^\d]/g,'').slice(0,2)">
@@ -130,7 +99,6 @@
 </div>
 
 <script>
-    // 檢查 Canvas 是否有簽名
     function isCanvasEmpty(canvas) {
         const blank = document.createElement('canvas');
         blank.width = canvas.width;
@@ -139,47 +107,41 @@
     }
 
     function saveAsPDF() {
-        // --- 驗證邏輯 ---
         const no = document.querySelector('.input-no').value.trim();
         const days = document.querySelector('.input-days').value.trim();
-        const year = document.querySelector('.input-year').value.trim();
         const monthInput = document.querySelector('.input-month');
-        const month = monthInput.value.trim();
-        const day = document.querySelector('.input-day').value.trim();
-        const photo = document.getElementById('preview').src;
+        const photoUploaded = document.getElementById('preview').style.display !== 'none';
         const sigUser = document.getElementById('sig-user');
         const sigAdmin = document.getElementById('sig-admin');
 
-        if (!no || !days || !year || !month || !day || !photo || isCanvasEmpty(sigUser) || isCanvasEmpty(sigAdmin)) {
-            alert("❌ 有項目未填寫，無法下載！");
+        // --- 驗證邏輯：排除日期項 (year, month, day 不在檢查內) ---
+        if (!no || !days || !photoUploaded || isCanvasEmpty(sigUser) || isCanvasEmpty(sigAdmin)) {
+            alert("✋有項目未填寫，無法下載");
             return;
         }
 
-        // --- 輸出優化 ---
-        // 1. 月份去零 (例如 05 -> 5)
-        const originalMonth = monthInput.value;
-        monthInput.value = parseInt(originalMonth, 10).toString();
+        // --- 處理月份去零 (確保 HTML 內容更新) ---
+        const originalMonthValue = monthInput.value;
+        if(originalMonthValue) {
+            monthInput.value = parseInt(originalMonthValue, 10).toString();
+        }
 
-        // 2. 隱藏虛線與紅星
         const element = document.getElementById('certificate');
         const targets = [document.getElementById('target-photo'), sigUser, sigAdmin];
         targets.forEach(el => el.style.borderColor = 'transparent');
-        const stars = document.querySelectorAll('.required-star');
-        stars.forEach(s => s.style.display = 'none');
 
         const opt = {
             margin:       0,
-            filename:     `cactus_${no}.pdf`, // 刪去括號
+            filename:     `cactus_${no}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
+            html2canvas:  { scale: 2, useCORS: true, logging: false },
             jsPDF:        { unit: 'px', format: [800, 565], orientation: 'landscape' }
         };
 
+        // 使用 Promise 確保在 PDF 生成期間月份是去零狀態
         html2pdf().set(opt).from(element).toPdf().get('pdf').save().then(() => {
-            // 恢復畫面內容
             targets.forEach(el => el.style.borderColor = '#ccc');
-            stars.forEach(s => s.style.display = 'block');
-            monthInput.value = originalMonth; // 恢復原本填寫的樣子
+            monthInput.value = originalMonthValue; // 下載完後恢復原本輸入樣式
         });
     }
 
@@ -203,9 +165,7 @@
         const resize = () => {
             canvas.width = canvas.offsetWidth;
             canvas.height = canvas.offsetHeight;
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = '#000000'; // 簽名改為黑色
+            ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
         };
         resize();
         let drawing = false;
